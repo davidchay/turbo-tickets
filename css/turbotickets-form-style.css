@@ -1,0 +1,71 @@
+#contentturboticketform fieldset
+{
+    margin-bottom:1rem;
+}
+
+
+#contentturboticketform form
+{
+    width: 100%;
+}
+#contentturboticketform form p
+{
+    margin-bottom:1em;
+    width: 100%;
+}
+
+#contentturboticketform form p input,
+#contentturboticketform form p textarea
+{
+    width:100%;
+
+}
+#contentturboticketform form p label{
+    
+}
+
+/* The alert message box */
+.alert {
+    padding: 20px;
+    background-color: #CCCCCC;
+    color: white;
+    margin-bottom: 15px;
+}
+.alert.error{
+    background-color: #FF4136;
+}
+.alert.warning{
+    background-color: #FF851B;
+}
+.alert.success{
+    background-color: #2ECC40;
+}
+
+.alert.info{
+    background-color: #7FDBFF;
+}
+/* The close button */
+.closebtn {
+    margin-left: 15px;
+    color: white;
+    font-weight: bold;
+    float: right;
+    font-size: 22px;
+    line-height: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* When moving the mouse over the close button */
+.closebtn:hover {
+    color: black;
+}
+
+input[type="text"].inputerror, 
+input[type="email"].inputerror, 
+input[type="tel"].inputerror, 
+textarea.inputerror 
+{
+    color: #FF4136 ;
+    border: 1px solid #FF4136 ;;
+}

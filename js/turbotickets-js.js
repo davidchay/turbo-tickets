@@ -20,5 +20,11 @@ jQuery(function($){
         }
         
     });
+
+    $('.image-link').magnificPopup({type:'image'});
+
+    
+    jQuery('#turboticket-update').attr('enctype','multipart/form-data');
+    jQuery('#turboticket-update').attr('encoding', 'multipart/form-data');
 });
 

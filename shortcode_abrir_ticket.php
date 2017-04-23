@@ -4,8 +4,10 @@
 //add_action('wp_head', 'form_contratacion_initialize');
 // Create Slider
 function form_nuevo_ticket() { 
-    wp_enqueue_script('form-nuevo-ticket');
-    wp_enqueue_style('form-turboticket-style');
+
+wp_enqueue_script('form-nuevo-ticket');
+wp_enqueue_style( 'turbotickest_style');
+    
 
 require_once('recaptchalib.php');
 
@@ -60,7 +62,7 @@ $error = null;
         }if(strlen($email)===0){
             $email_err='inputerror';
             $err_g=$err_g+1;
-        }if(strlen($email)===0){
+        }if(strlen($telefono)===0){
             $telefono_err='inputerror';
             $err_g=$err_g+1;
         }if(strlen($asunto)===0){
@@ -88,6 +90,8 @@ $error = null;
                             make_thumb( $media, $src_thumbs, 180);
                         }
                         global $wpdb;
+                        $token = str_shuffle("abcdefghijklmnopqrstuvwxyz0123456789".uniqid());
+                        $token = substr($token, -12);
                         $tabla_reportes = $wpdb->prefix . REPORTES;
                         $tabla_seguimiento = $wpdb->prefix . SEGUIMIENTO;
                         date_default_timezone_set("America/Mexico_City");
@@ -95,6 +99,7 @@ $error = null;
                         $wpdb->insert(
                             $tabla_reportes,
                             array(
+                                'token'=> $token,
                                 'nombre' => $_POST['nombre'],
                                 'colonia'    => $_POST['colonia'],
                                 'email' => $_POST['email'],
@@ -122,6 +127,22 @@ $error = null;
                             <div class="alert success">
                                 <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
                                 :) Gracias por usar nuestro sistema de tickets en breve uno de nuestros tecnicos se pondra en contacto con usted. 
+                            </div>
+                            <div class="tickets_output_success">
+                                <p class="lead">
+                                    <?php echo $nombre; ?>, has abierto un nuevo ticket.
+                                </p>
+                                <p>
+                                   Asunto: <?php echo $asunto; ?><br>
+                                   <?php echo $mensaje; ?>
+                                </p>
+                                <p>
+                                    Para ver el seguimiento del ticket debes ingresar en la sección <em>seguimiento de ticket</em> con los siguientes datos.
+                                </p>
+                                <p>
+                                    Email: <strong><?php echo $email; ?></strong><br/>
+                                    Token: <strong><?php echo $token; ?></strong>
+                                </p>
                             </div>
                             <?php
                            
@@ -159,7 +180,7 @@ $error = null;
         }
     }
     ?>
-    <div id="contentturboticketform">
+    <div>
         <form action ="" method="POST" enctype="multipart/form-data" class="">
         <fieldset>
             
@@ -189,7 +210,7 @@ $error = null;
                 <textarea name="mensaje" class="<?php if(isset($mensaje_err)) echo $mensaje_err;?>" ><?php echo $mensaje; ?></textarea>
             </p>
             <p>
-                <label for="media">Imagen (.png,.jpeg,.jpg)</label>
+                <label for="media" class="d-block">Imagen <small>(Solo imagenes tipo: png,jpeg,jpg)</small></label>
                 <input type="file" name="media">
             </p>
             

@@ -34,6 +34,7 @@ function turbotickets_create_tables()
     //sql con el statement de la tabla
     $sql = "CREATE TABLE IF NOT EXISTS $table_name (
       id int(11) NOT NULL AUTO_INCREMENT,
+      token char(25) NOT NULL,
       nombre char(60) NOT NULL ,
       colonia char(50) NOT NULL ,
       email char(60),
@@ -91,15 +92,18 @@ function load_turbotickets_admin($hook) {
     if($hook != 'toplevel_page_turbotickets') {
         return;
     }
-    wp_enqueue_style( 'turbotickest_admin', plugins_url('css/turbotickets-style.css', __FILE__) );
+    wp_enqueue_style( 'turbotickest_admin_magnific_popup', plugins_url('css/magnific-popup.css', __FILE__) );
+    wp_enqueue_script( 'turbotickest_admin_magnific_popup', plugins_url('js/jquery.magnific-popup.min.js', __FILE__), array('jquery'), true );
+
+    wp_enqueue_style( 'turbotickest_style', plugins_url('css/turbotickets-style.css', __FILE__) );
     wp_enqueue_script( 'turbotickest_admin_js', plugins_url('js/turbotickets-js.js', __FILE__), array('jquery'), true );
 }
 add_action( 'admin_enqueue_scripts', 'load_turbotickets_admin' );
 
 function add_scripts() {
-    wp_register_script( 'form-nuevo-ticket', plugins_url('js/form-nuevo-ticket.js', __FILE__), array('jquery'), true) ;
+    wp_register_style( 'turbotickest_style', plugins_url('css/turbotickets-style.css', __FILE__) );
     wp_register_script( 'form-consulta-ticket', plugins_url('js/form-consulta-ticket.js', __FILE__), array('jquery'), true);
-    wp_register_style( 'form-turboticket-style', plugins_url('css/turbotickets-form-style.css', __FILE__));
+    
 }
 add_action( 'wp_enqueue_scripts', 'add_scripts' );
 
@@ -266,16 +270,17 @@ function turbotickets_nuevo_ticket(){
             $err_g=$err_g+1;
         }
         if($err_g==0){
-            echo '<div class="notice notice-success is-dismissible">
-                    <p>Datos guardados correctamente</p>
-                </div>';      
+                
                 global $wpdb;
+                $token = str_shuffle("abcdefghijklmnopqrstuvwxyz0123456789".uniqid());
+                $token = substr($token, -12);
                 $tabla_reportes = $wpdb->prefix . REPORTES;
                 $tabla_seguimiento = $wpdb->prefix . SEGUIMIENTO;
                 date_default_timezone_set("America/Mexico_City");
                 $wpdb->insert(
                     $tabla_reportes,
                     array(
+                        'token' => $token,
                         'nombre' => $_POST['nombre'],
                         'colonia'    => $_POST['colonia'],
                         'email' => $_POST['email'],
@@ -297,7 +302,10 @@ function turbotickets_nuevo_ticket(){
                 );
                 
                 if(!$wpdb->last_error){
-                    $success=1;    
+                    $success=1;  
+                     echo '<div class="notice notice-success is-dismissible">
+                            <p>Datos guardados correctamente</p>
+                        </div>';   
                 }
         }else{
             echo '<div class="notice notice-error is-dismissible">
@@ -363,7 +371,6 @@ function turbotickets_nuevo_ticket(){
 }
 function turbotickets_seguimiento_ticket(){
     if(!isset($_GET['id'])) {
-        $id=0;
         return;
     } else {
         $id=$_GET['id'];
@@ -371,8 +378,9 @@ function turbotickets_seguimiento_ticket(){
     global $wpdb;
     $tabla_reportes = $wpdb->prefix . REPORTES;
     $tabla_seguimiento = $wpdb->prefix . SEGUIMIENTO;
-    date_default_timezone_set("America/Mexico_City");
-    if(isset($_POST['status']))
+    $comentario='';
+    $error=0;
+    if(isset($_POST['submit-status']) && !empty($_POST['submit-status'])  )
     {
         $status=$_POST['status'];
         $wpdb->update(
@@ -388,23 +396,56 @@ function turbotickets_seguimiento_ticket(){
                     <p>El status a cambiado a <em>'.$status.'</em> </p>
                 </div>';
         }
-    }else if(isset($_POST['nuevo_mensaje']) && !empty($_POST['nuevo_mensaje'])){
-        $comentario=$_POST['nuevo_mensaje'];
-         $wpdb->insert(
-            $tabla_seguimiento,
-            array(
-                
-                'id_ticket'=>$id,
-                'comentario' => $comentario,
-                'autor' => 'tecnico',
-                'fecha' => current_time('mysql')
-            )
-        );
-        if(!$wpdb->last_error){
-            echo '<div class="notice notice-success is-dismissible">
-                    <p>Se agrego nuevo mensaje</p>
-                </div>';
+    }
+    if(isset($_POST['submit']) && !empty($_POST['submit'])){
+        $comentario = (empty($_POST['nuevo_mensaje'])) ? '' : $_POST['nuevo_mensaje'];
+        if(isset($_FILES['media']) && !empty($_FILES['media']['name']))
+        {
+            $nombre_archivo = $_FILES['media']['name'];
+            $tipo_archivo = $_FILES['media']['type'];
+            $tamano_archivo = $_FILES['media']['size'];
+            if (!((strpos($tipo_archivo, "png") || strpos($tipo_archivo, "gif") || strpos($tipo_archivo, "jpg") || strpos($tipo_archivo, "jpeg") ) && ($tamano_archivo < 2000000))) 
+            {
+                ?>
+
+                <div class="notice notice-warning is-dismissible">
+                    <p>
+                    El archivo debe ser tipo .png .jpeg .jpg <br/> 
+                    El archivo debe pesar menos de 2MB.
+                    </p>
+                </div>
+                <?php 
+                $error=1;
+            }
         }
+        if($error===0){
+            $media='';
+            if(isset($_FILES['media']) && !empty($_FILES['media']['name']))
+            {
+                $media=plugin_dir_path( __FILE__ ).'MEDIA/'.$nombre_archivo;
+                $src_thumbs=plugin_dir_path( __FILE__ ).'MEDIA/thumbs/'.$nombre_archivo;
+                move_uploaded_file($_FILES['media']['tmp_name'], $media);
+                make_thumb( $media, $src_thumbs, 180);
+                $media=$nombre_archivo;
+            }
+            $wpdb->insert(
+                $tabla_seguimiento,
+                array(
+                    'id_ticket'=>$id,
+                    'comentario' => $comentario,
+                    'autor' => 'tecnico',
+                    'media' => $media,
+                    'fecha' => current_time('mysql')
+                )
+            );
+            if(!$wpdb->last_error){
+                echo '<div class="notice notice-success is-dismissible">
+                        <p>Se agrego nuevo mensaje</p>
+                    </div>';
+                $comentario='';    
+            }
+        }
+        
         
     }else if(isset($_POST['nuevo_mensaje']) && empty($_POST['nuevo_mensaje'])){
         echo '<div class="notice notice-warning is-dismissible">
@@ -457,9 +498,10 @@ function turbotickets_seguimiento_ticket(){
             </tbody>
         </table>
         <?php  if($status!=='Resuelto'){  ?> 
+        <hr>
         <p>
             <label><input type="checkbox" id="habilitar" > Editar Estatus</label>
-            <form action="<?php echo PATH; ?>&op=seguimiento&id=<?php echo $id; ?>" method="POST">
+            <form action="<?php echo PATH; ?>&op=seguimiento&id=<?php echo $id; ?>" method="POST" >
                 <label for="status">Estatus: 
                     <select id="status" name="status" disabled>
                         <option value="Pendiente" <?php if($status==='Pendiente') echo 'selected' ?>>Pendiente</option>
@@ -468,13 +510,12 @@ function turbotickets_seguimiento_ticket(){
                     </select>
                 </label>
                 
-                <input id="submitstatus" type="submit" class="button-secondary" name="s" value="guardar" disabled>
-            <form>
+                <input id="submitstatus" type="submit" class="button-secondary" name="submit-status" value="guardar" disabled>
+            </form>
         </p>
         <?php } ?>
+        <hr>
         <h2 class="lead"><?php if(isset($asunto)) echo $asunto; ?></h2>      
-        <hr> 
-      
         <?php 
         $sql_msg="SELECT * FROM $tabla_seguimiento WHERE id_ticket = $id ";
         $mensajes = $wpdb->get_results($sql_msg);
@@ -492,8 +533,10 @@ function turbotickets_seguimiento_ticket(){
                        echo $mensaje->comentario; 
                        if(strlen($mensaje->media)>1){
                        ?>
-                        <span class="d-block" style="margin-top:25px;">
-                            <img src="<?php echo plugin_dir_url( __FILE__ ).'/MEDIA/thumbs/'.$mensaje->media; ?>" />
+                        <span class="d-block" style="margin-top:5px;">
+                            <a href="<?php echo plugin_dir_url( __FILE__ ).'/MEDIA/'.$mensaje->media; ?>" class="image-link">
+                                <img src="<?php echo plugin_dir_url( __FILE__ ).'/MEDIA/thumbs/'.$mensaje->media; ?>" />
+                            </a>
                         </span>
                        <?php } ?>
                     </p>  
@@ -505,28 +548,31 @@ function turbotickets_seguimiento_ticket(){
         ?>
                 
         <div class="clearfix"></div>
-              
+        <hr>      
         <?php  if($status!=='Resuelto'){  ?> 
          
-        <form action="<?php echo PATH; ?>&op=seguimiento&id=<?php echo $id; ?>" method="POST" >
-        
-        <?php 
-        /*
-        * Funcion para agregar timnce a un textarea
-        */
-        $content   = '';
-        $editor_id = 'nuevo_mensaje';
-        $settings = array(
-            'media_buttons' => false,
-            'textarea_rows' => 3,
-            'teeny'         => true,
-        );
-        wp_editor( $content, $editor_id, $settings );
-        ?>
-        <p>
-           
-            <input type="submit" class="button-primary" name="enviar" value="Enviar">
-        </p>
+        <form  action="<?php echo PATH; ?>&op=seguimiento&id=<?php echo $id; ?>" method="POST" enctype="multipart/form-data" encoding="multipart/form-data" >
+            <p>
+                <label for="media" class="d-block">Agregar imagen <small>(Solo imagenes tipo: png,jpeg,jpg)</small></label>
+                <input type="file" name="media" >
+            </p>
+            <?php 
+            /*
+            * Funcion para agregar timnce a un textarea
+            */
+            $content   = $comentario;
+            $editor_id = 'nuevo_mensaje';
+            $settings = array(
+                'media_buttons' => false,
+                'textarea_rows' => 3,
+                'teeny'         => true,
+            );
+            wp_editor( $content, $editor_id, $settings );
+            ?>
+            <p>
+            
+                <input type="submit" class="button-primary" name="submit" value="Enviar">
+            </p>
         </form>
         <?php   }       ?>
         <?php 
@@ -656,7 +702,7 @@ function turbotickets_update_ticket(){
             return;
      }
 ?>
-    <form action="<?php echo PATH; ?>&op=update&save=1&id=<?php echo $id; ?>" method="POST">
+    <form action="<?php echo PATH; ?>&op=update&save=1&id=<?php echo $id; ?>" method="POST" >
         <table class="form-table">
             <tbody>
                 <tr>
@@ -716,7 +762,8 @@ function turbotickets_update_ticket(){
 
 
 
-require_once( plugin_dir_path( __FILE__ ).'/shortcodes.php' );
+require_once( plugin_dir_path( __FILE__ ).'/shortcode_abrir_ticket.php' );
+require_once( plugin_dir_path( __FILE__ ).'/shortcode_seguimiento_ticket.php' );
 /**
 CHECAR esta pagina
 http://www.kminek.pl/lab/wordpress-contact-form-with-attachment-support/

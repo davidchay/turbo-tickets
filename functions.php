@@ -9,7 +9,6 @@ function make_thumb($src, $dest, $desired_width) {
 
 	/* read the source image */
     $ext = strtolower(substr($src, -3));
-    echo $ext;
     switch ($ext){
         case 'png':
             $source_image = imagecreatefrompng($src);

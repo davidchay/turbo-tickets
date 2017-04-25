@@ -62,6 +62,7 @@ span.error{
     width:auto;
     display:inline-block;
     margin-top: 0;
+    margin-bottom:0;
 }
 
 .ttmsg.cliente::after{
@@ -113,6 +114,10 @@ span.error{
     display: block;
 }
 
+.text-light{
+    color:#CCCCCC;
+}
+
 /*Form*/
 #contentturboticketform fieldset
 {
@@ -134,7 +139,7 @@ span.error{
 #contentturboticketform form p textarea
 {
     width:100%;
-
+  
 }
 
 /* The alert message box */

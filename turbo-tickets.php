@@ -102,8 +102,10 @@ add_action( 'admin_enqueue_scripts', 'load_turbotickets_admin' );
 
 function add_scripts() {
     wp_register_style( 'turbotickest_style', plugins_url('css/turbotickets-style.css', __FILE__) );
-    wp_register_script( 'form-consulta-ticket', plugins_url('js/form-consulta-ticket.js', __FILE__), array('jquery'), true);
-    
+    wp_register_script( 'form-ticket', plugins_url('js/form-ticket.js', __FILE__), array('jquery'), true);
+    wp_register_style( 'turbotickest_admin_magnific_popup', plugins_url('css/magnific-popup.css', __FILE__) );
+    wp_register_script( 'turbotickest_admin_magnific_popup', plugins_url('js/jquery.magnific-popup.min.js', __FILE__), array('jquery'), true );
+
 }
 add_action( 'wp_enqueue_scripts', 'add_scripts' );
 
@@ -303,7 +305,10 @@ function turbotickets_nuevo_ticket(){
                 
                 if(!$wpdb->last_error){
                     $success=1;  
-                     echo '<div class="notice notice-success is-dismissible">
+                    $email_body=email_template_nuevo($nombre,$asunto,$mensaje,$telefono,$email,$colonia,$token);
+                    $asunto='Turbo Internet Tapachula. Ticket de soporte: '.$token;
+                    send_email($nombre,$email,$asunto,$email_body);
+                    echo '<div class="notice notice-success is-dismissible">
                             <p>Datos guardados correctamente</p>
                         </div>';   
                 }
@@ -464,8 +469,12 @@ function turbotickets_seguimiento_ticket(){
             <tbody>
                 <?php foreach($result as $print){   ?>
                 <tr>
+                    <th><span class="mp6-primary">Token</span></th>
+                    <td><?php echo $print->token; ?></td>
+                </tr>
+                <tr>
                     <th><span class="mp6-primary">Nombre</span></th>
-                    <td><?php echo $print->nombre; ?></td>
+                    <td><?php echo $print->nombre; $nombre=$print->nombre; ?></td>
                 </tr>
                 <tr>
                     <th><span class="mp6-primary">Colonia</span></th>
@@ -487,7 +496,7 @@ function turbotickets_seguimiento_ticket(){
                 </tr>
                 <tr>
                     <th><span class="mp6-primary">Fecha<span></th>
-                    <td><?php echo $print->fecha; $fecha_reporte=$print->fecha; ?></td>
+                    <td><?php echo friendly_date($print->fecha); $fecha_reporte=$print->fecha; ?></td>
                 </tr>
                 <tr>
                     <th><span class="mp6-primary">Asunto</span></th>
@@ -527,7 +536,9 @@ function turbotickets_seguimiento_ticket(){
                 <div class="ttmsg-content <?php echo $mensaje->autor; ?>"> 
                     
                     
-                    <small class="d-block <?php if($mensaje->autor!=='tecnico') echo 'text-right';  ?> ttat"> <?php echo $mensaje->fecha; ?></small>
+                    <span class="d-block text-light <?php if($mensaje->autor!=='cliente') echo 'text-right';  ?>"><?php 
+                            echo ($mensaje->autor == 'cliente') ? $nombre : 'Técnico' ; 
+                            ?></span> 
                     <p class="ttmsg <?php echo $mensaje->autor; ?>">
                        <?php 
                        echo $mensaje->comentario; 
@@ -540,6 +551,7 @@ function turbotickets_seguimiento_ticket(){
                         </span>
                        <?php } ?>
                     </p>  
+                    <small class="d-block <?php if($mensaje->autor!=='tecnico') echo 'text-right';  ?> ttat"> <?php echo friendly_date($mensaje->fecha); ?></small>
                 </div>
                     
         <?php

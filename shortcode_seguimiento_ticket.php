@@ -4,10 +4,18 @@
 //add_action('wp_head', 'form_contratacion_initialize');
 // Create Slider
 function form_seguimiento_ticket() { 
-    wp_enqueue_script('form-nuevo-ticket');
+    wp_enqueue_script('form-ticket');
     wp_enqueue_style( 'turbotickest_style');
+    wp_enqueue_style( 'turbotickest_admin_magnific_popup');
+    wp_enqueue_script( 'turbotickest_admin_magnific_popup');
+
+    global $wpdb;
+    $tabla_reportes = $wpdb->prefix . REPORTES;
+    $tabla_seguimiento = $wpdb->prefix . SEGUIMIENTO;
     $result = '';
     $err_g=0;
+    $comentario='';
+    $error=0;
     $token = (empty($_POST['token'])) ? '' : $_POST['token'];
     $email = (empty($_POST['email'])) ? '' : $_POST['email'];
     if(isset($_POST['submit_seguimiento']) && !empty($_POST['submit_seguimiento'])){
@@ -20,25 +28,128 @@ function form_seguimiento_ticket() {
         }
         if($err_g==0)
         {    
-            global $wpdb;
-            $tabla_reportes = $wpdb->prefix . REPORTES;
-            $tabla_seguimiento = $wpdb->prefix . SEGUIMIENTO;
+            if(isset($_POST['nuevo_mensaje']) && !empty($_POST['nuevo_mensaje']))
+            {
+                $comentario = (empty($_POST['nuevo_mensaje'])) ? '' : $_POST['nuevo_mensaje'];
+                if(isset($_FILES['media']) && !empty($_FILES['media']['name']))
+                {
+                    $nombre_archivo = $_FILES['media']['name'];
+                    $tipo_archivo = $_FILES['media']['type'];
+                    $tamano_archivo = $_FILES['media']['size'];
+                    if (!((strpos($tipo_archivo, "png") || strpos($tipo_archivo, "gif") || strpos($tipo_archivo, "jpg") || strpos($tipo_archivo, "jpeg") ) && ($tamano_archivo < 2000000))) 
+                    {
+                        ?>
+
+                        <div class="notice notice-warning is-dismissible">
+                            <p>
+                            El archivo debe ser tipo .png .jpeg .jpg <br/> 
+                            El archivo debe pesar menos de 2MB.
+                            </p>
+                        </div>
+                        <?php 
+                        $error=1;
+                    }
+                }
+                if($error===0)
+                {
+                    $media='';
+                    $sql="SELECT id FROM $tabla_reportes WHERE email = '$email' AND token = '$token' ";
+                    $id = $wpdb->get_var($sql);
+                    if(isset($_FILES['media']) && !empty($_FILES['media']['name']))
+                    {
+                        $media=plugin_dir_path( __FILE__ ).'MEDIA/'.$nombre_archivo;
+                        $src_thumbs=plugin_dir_path( __FILE__ ).'MEDIA/thumbs/'.$nombre_archivo;
+                        move_uploaded_file($_FILES['media']['tmp_name'], $media);
+                        make_thumb( $media, $src_thumbs, 180);
+                        $media=$nombre_archivo;
+                    }
+                    $wpdb->insert(
+                        $tabla_seguimiento,
+                        array(
+                            'id_ticket'=>$id,
+                            'comentario' => $comentario,
+                            'autor' => 'cliente',
+                            'media' => $media,
+                            'fecha' => current_time('mysql')
+                        )
+                    );
+                    if(!$wpdb->last_error){
+                        ?>
+                        <div class="alert success">
+                            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+                            Se agrego nuevo mensaje
+                        </div>
+
+                        <?php
+                        $comentario='';    
+                    }
+                }
+                else{
+                    ?>
+                    <div class="alert error">
+                        <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
+                        Mensaje no guardado. El mensaje no tenia contenido
+                    </div>
+                    <?php
+                }
+            }
             $sql="SELECT * FROM $tabla_reportes WHERE email = '$email' AND token = '$token' ";
             $result = $wpdb->get_row($sql);
+            $status='Resuelto';
             if($result)
             {
+                $id=$result->id;
                 ?>
-                Nombre: <?php echo $result->nombre; ?><br/>
-                Colonia: <?php echo $result->colonia; ?><br/>
-                Email: <?php echo $result->email; ?><br/>
-                Telefono: <?php echo $result->telefono; ?><br/>
-                Estatus: <?php echo $result->status; ?><br/>
-                Asunto: <?php echo $result->asunto; ?><br/>
-                Fecha: <?php echo $result->fecha; ?><br/>
-                Token: <?php echo $result->token; ?><br/>
-                
-                
+               <p class="lead"> Hola, <?php echo $result->nombre; ?>.</p>
+               <p>
+                    Acontinuación te presentamos el seguimiento del ticket 
+                    que abriste el <?php echo friendly_date($result->fecha); ?>
+                </p>
+                <h3>Datos de contacto.</h3> 
+                <p>
+                    Email: <?php echo $result->email; ?><br/>
+                    Teléfono: <?php echo $result->telefono; ?>
+                </p>
+                <h3>Seguimiento.</h3>
+                <p>
+                    Estatus: <?php $status=$result->status; echo $status; ?>
+                </p>
+                <p class="lead"><?php echo $result->asunto; ?></p>
                 <?php
+                $sql_msg="SELECT * FROM $tabla_seguimiento WHERE id_ticket = $id ";
+                $mensajes = $wpdb->get_results($sql_msg);
+                if($mensajes)
+                {
+                    foreach($mensajes as $mensaje)
+                    {   
+                        ?>
+                        <div class="ttmsg-content <?php echo $mensaje->autor; ?>">
+                            <span class="d-block text-light <?php if($mensaje->autor!=='cliente') echo 'text-right';  ?>"><?php 
+                            echo ($mensaje->autor == 'cliente') ? $result->nombre : 'Técnico' ; 
+                            ?></span> 
+                           
+                            <p class="ttmsg <?php echo $mensaje->autor; ?>">
+                            <?php 
+                                echo $mensaje->comentario; 
+                                if(strlen($mensaje->media)>1)
+                                {
+                                ?>
+                                <span class="d-block" style="margin-top:5px;">
+                                    <a href="<?php echo plugin_dir_url( __FILE__ ).'/MEDIA/'.$mensaje->media; ?>" class="image-link">
+                                        <img src="<?php echo plugin_dir_url( __FILE__ ).'/MEDIA/thumbs/'.$mensaje->media; ?>" />
+                                    </a>
+                                </span>
+                                <?php 
+                                } 
+                                ?>
+                            </p>  
+                             <small class="d-block <?php if($mensaje->autor!=='tecnico') echo 'text-right';  ?> ttat"> <?php echo friendly_date($mensaje->fecha); ?></small>
+                        </div>
+                    <?php
+                    } //end foreach   
+                } //end if mensajes
+                
+                       
             } 
             else
             {
@@ -62,7 +173,9 @@ function form_seguimiento_ticket() {
         <?php
         }
     }
-    if(empty($result)){
+    
+    if(empty($result))
+    {
     ?>
     <div>
         <form action ="" method="POST">
@@ -80,8 +193,40 @@ function form_seguimiento_ticket() {
   	        <input type="submit" name="submit_seguimiento" value="Seguimiento" style="margin-top:15px;">
         </form>
     </div>   
-<?php 
+    <?php 
     }
+    else if($status!=='Resuelto')
+    {
+      ?>
+        <div class="clearfix"></div>
+        <hr>      
+        <form  action="" method="POST" enctype="multipart/form-data" encoding="multipart/form-data" >
+            <p>
+                <label for="media" class="d-block">Agregar imagen <small>(Solo imagenes tipo: png,jpeg,jpg)</small></label>
+                <input type="file" name="media" >
+            </p>
+            <?php 
+            /*
+            * Funcion para agregar timnce a un textarea
+            */
+            $content   = '';
+            $editor_id = 'nuevo_mensaje';
+            $settings = array(
+                'media_buttons' => false,
+                'textarea_rows' => 3,
+                'teeny'         => true,
+            );
+            wp_editor( $content, $editor_id, $settings );
+            ?>
+            <p>
+                <input type="hidden" name="email" value="<?php echo $email; ?>">
+                <input type="hidden" name="token" value="<?php echo $token; ?>">    
+                <input type="submit" class="button-primary" name="submit_seguimiento" value="Enviar">
+            </p>
+        </form>
+        <?php
+    }
+    
 }
 
 

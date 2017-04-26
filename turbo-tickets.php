@@ -272,7 +272,6 @@ function turbotickets_nuevo_ticket(){
             $err_g=$err_g+1;
         }
         if($err_g==0){
-                
                 global $wpdb;
                 $token = str_shuffle("abcdefghijklmnopqrstuvwxyz0123456789".uniqid());
                 $token = substr($token, -12);
@@ -444,6 +443,12 @@ function turbotickets_seguimiento_ticket(){
                 )
             );
             if(!$wpdb->last_error){
+                $sql="SELECT nombre,email,token FROM $tabla_reportes WHERE ID=$id";
+                $data = $wpdb->get_row($sql);
+                $email_body=email_template_seguimiento($data->nombre,$comentario,'Técnico',$data->email,$data->token);
+                $asunto='Turbo Internet Tapachula. Ticket de soporte: '.$data->token;
+                send_email($data->nombre,$data->email,$asunto,$email_body);
+                
                 echo '<div class="notice notice-success is-dismissible">
                         <p>Se agrego nuevo mensaje</p>
                     </div>';
@@ -534,8 +539,6 @@ function turbotickets_seguimiento_ticket(){
             {   
             ?>
                 <div class="ttmsg-content <?php echo $mensaje->autor; ?>"> 
-                    
-                    
                     <span class="d-block text-light <?php if($mensaje->autor!=='cliente') echo 'text-right';  ?>"><?php 
                             echo ($mensaje->autor == 'cliente') ? $nombre : 'Técnico' ; 
                             ?></span> 

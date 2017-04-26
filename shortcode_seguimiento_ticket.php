@@ -74,6 +74,11 @@ function form_seguimiento_ticket() {
                         )
                     );
                     if(!$wpdb->last_error){
+                        $sql="SELECT nombre,email,token FROM $tabla_reportes WHERE ID=$id";
+                        $data = $wpdb->get_row($sql);
+                        $email_body=email_template_seguimiento($data->nombre,$comentario,$data->nombre,$data->email,$data->token);
+                        $asunto='Turbo Internet Tapachula. Ticket de soporte: '.$data->token;
+                        send_email($data->nombre,$data->email,$asunto,$email_body);
                         ?>
                         <div class="alert success">
                             <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
@@ -222,6 +227,26 @@ function form_seguimiento_ticket() {
                 <input type="hidden" name="email" value="<?php echo $email; ?>">
                 <input type="hidden" name="token" value="<?php echo $token; ?>">    
                 <input type="submit" class="button-primary" name="submit_seguimiento" value="Enviar">
+            </p>
+        </form>
+
+        <form  action="" method="POST">
+           <p>
+                <input type="hidden" name="email" value="0">
+                <input type="hidden" name="token" value="0">    
+                <input type="hidden" name="nuevo_mensaje" value="0">    
+                <input type="submit" class="button-secondary" name="submit_seguimiento" value="Salir">
+            </p>
+        </form>
+        <?php
+    }else{
+        ?>
+        <form  action="" method="POST">
+           <p>
+                <input type="hidden" name="email" value="0">
+                <input type="hidden" name="token" value="0">    
+                <input type="hidden" name="nuevo_mensaje" value="0">    
+                <input type="submit" class="button-secondary" name="submit_seguimiento" value="Salir">
             </p>
         </form>
         <?php

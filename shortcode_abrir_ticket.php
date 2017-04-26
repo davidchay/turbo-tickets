@@ -28,6 +28,8 @@ $error = null;
     $asunto = (empty($_POST['asunto'])) ? '' : $_POST['asunto'];
     $mensaje = (empty($_POST['mensaje'])) ? '' : $_POST['mensaje'];
     $response_captcha= (empty($_POST["recaptcha_response_field"])) ? '' : $_POST["recaptcha_response_field"];
+    $nombre_archivo='';
+    
     if(isset($_POST['submit']) && !empty($_POST['submit'])){
  
         // Check if user answered the question
@@ -37,7 +39,7 @@ $error = null;
          $err_g=$err_g+1;       
         }
        
-        if(isset($_FILES['media']))
+        if(isset($_FILES['media'])   && !empty($_FILES['media']['name']))
         {
             $nombre_archivo = $_FILES['media']['name'];
             $tipo_archivo = $_FILES['media']['type'];
@@ -82,7 +84,7 @@ $error = null;
                 if ($resp->is_valid) 
                 {
                         $media='';
-                        if(isset($_FILES['media'])){
+                        if(isset($_FILES['media']) && !empty($_FILES['media']['name'])){
                             
                             $media=plugin_dir_path( __FILE__ ).'MEDIA/'.$nombre_archivo;
                             $src_thumbs=plugin_dir_path( __FILE__ ).'MEDIA/thumbs/'.$nombre_archivo;
@@ -123,6 +125,9 @@ $error = null;
                         
                         if(!$wpdb->last_error)
                         {
+                            $email_body=email_template_nuevo($nombre,$asunto,$mensaje,$telefono,$email,$colonia,$token);
+                            $asunto_email='Turbo Internet Tapachula. Ticket de soporte: '.$token;
+                            send_email($nombre,$email,$asunto_email,$email_body);
                             ?>
                             <div class="alert success">
                                 <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span> 
@@ -133,8 +138,16 @@ $error = null;
                                     <?php echo $nombre; ?>, has abierto un nuevo ticket.
                                 </p>
                                 <p>
-                                   Asunto: <?php echo $asunto; ?><br>
-                                   <?php echo $mensaje; ?>
+                                    <span class="d-block">
+                                        Ticket: <?php echo $token; ?>
+                                    </span>
+                                    <span class="d-block">
+                                        Asunto: <?php echo $asunto; ?>
+                                    </span>
+                                    <span class="d-block">
+                                        Mensaje: <?php echo $mensaje; ?>
+                                    </span>
+                                   </p>
                                 </p>
                                 <p>
                                     Para ver el seguimiento del ticket debes ingresar en la sección <em>seguimiento de ticket</em> con los siguientes datos.
